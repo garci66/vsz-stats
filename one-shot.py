@@ -24,12 +24,9 @@ logging.basicConfig(format="[%(asctime)s] %(levelname)s %(message)s")
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-
 if os.environ.get('MEDIATEL_DEBUG') is not None:
     logger.setLevel(logging.DEBUG)
     logger.info('set log level to DEBUG')
-
-
 
 TARGET_BUCKET='mediatel-parquet'
 if os.environ.get('MEDIATEL_PARQUET_BUCKET') is not None:
@@ -48,10 +45,6 @@ if os.environ.get('MEDIATEL_BUCKET_PATH') is not None:
 
 s3_client = boto3.client('s3')
 s3 = s3fs.S3FileSystem()
-s3s3 = boto3.resource('s3') 
-mybucket=s3s3.Bucket('mediatel-vsz-push')
-
-
 
 def s3_key_exists(bucket, key):
     try:
@@ -65,10 +58,9 @@ def s3_key_exists(bucket, key):
     else:
         return True
 
-
 def extract_stats(infile):
     #APREportsStars MUST be the first to be processed!
-    tables_to_process=[JOIN_TABLE, 'APReportBinWlan','FlowMessage','APReportBinClient']
+    tables_to_process=[JOIN_TABLE, 'APReportBinWlan','FlowMessage','APReportBinClient', 'APStatusRadio']
     df_array= {}
     good_headers={}
 
@@ -125,10 +117,10 @@ def extract_stats(infile):
 
             if 'sampleTime' in this_header_row:
                 logger.debug("reading file with good header: {}".format(filename))
-                tdf=pd.read_csv(my_fake_file, header=0, names=good_headers[this_table], index_col=False)
+                tdf=pd.read_csv(my_fake_file, header=0, names=good_headers[this_table], index_col=False, keep_default_na=False)
             else:
                 logger.debug("reading file with missing header: {}".format(filename))
-                tdf=pd.read_csv(my_fake_file, header=None, names=good_headers[this_table], index_col=False)
+                tdf=pd.read_csv(my_fake_file, header=None, names=good_headers[this_table], index_col=False, keep_default_na=False)
             if len(tdf)>1:
                 logger.debug("File {} with {} rows read by pandas".format(filename, len(tdf)))
                 list_.append(tdf)
@@ -139,20 +131,20 @@ def extract_stats(infile):
 
         logger.debug("Finished loading data for table: {}".format(this_table))
 
+        if 'apMac' in df_array[this_table].columns:
+            df_array[this_table].rename(index=str,columns={'apMac':'ap'},inplace=True)
+
         if (this_table==JOIN_TABLE):
             df_aps=df_array[JOIN_TABLE][['ap','deviceName','domain_id','domain_name','zone_name','apgroup_name']]
             df_aps=df_aps.drop_duplicates(subset='ap')
-
-        if 'apMac' in df_array[this_table].columns:
-            df_array[this_table].rename(index=str,columns={'apMac':'ap'},inplace=True)
-        
-        if this_table is not JOIN_TABLE:
+        else:
             df_array[this_table]=df_array[this_table].merge(df_aps,on='ap',how='left')
 
         logger.debug("Finished building left_join for table: {}".format(this_table))
 
-        df_array[this_table]=df_array[this_table][df_array[this_table].columns[~df_array[this_table].columns.str.contains('ipv6', case=False, regex=False)]]
-        #print "Processing dates and partitions: ", this_table
+        v6_cols=a.columns[a.columns.str.contains('v6',case=False, regex=False)]
+        v6_cols_dict=dict((key,'bytes') for key in v6cols)
+
         df_array[this_table]['sampleTimeNS']=pd.to_datetime(df_array[this_table]['sampleTime'],unit='s')
         #df_array[this_table]['partitionYear']=df_array[this_table]['sampleTimeNS'].dt.year
         #df_array[this_table]['partitionMonth']=df_array[this_table]['sampleTimeNS'].dt.month
@@ -172,8 +164,7 @@ def extract_stats(infile):
         logger.debug("Existing parquet file found for table {}: {}".format(this_table, create_file))
         logger.debug("Saving table: {} with fields: {}".format(this_table, df_array[this_table].columns))
         fp.write(parquet_s3_path, df_array[this_table], file_scheme='hive', append=create_file,
-            #partition_on=['domain_id','partitionYear','partitionMonth','partitionDay' ],
-            partition_on=['domain_id','partition_date'],
+            partition_on=['domain_id','partition_date'], object_encoding=v6_cols_dict,
             open_with=myopen, mkdirs=nop, compression='GZIP' )
 
         logger.debug("Finished saving table: {}".format(this_table))
@@ -193,6 +184,9 @@ else:
     freq='D'
     formatstring='%Y%m%d'
 
+s3s3 = boto3.resource('s3') 
+mybucket=s3s3.Bucket('mediatel-vsz-push')
+
 logger.info("Processing dates: {} {}".format(start_date, end_date))
 dates_to_parse = pd.date_range(start_date,end_date,freq=freq)
 for this_date in dates_to_parse:
@@ -202,7 +196,7 @@ for this_date in dates_to_parse:
             bucket = this_object.bucket_name
             key = this_object.key
             logger.info('Processing file: {} from bucket: {}'.format(key, bucket))
-            if os.environ.get('MEDIATEL_DRURUN') is None:
+            if os.environ.get('MEDIATEL_DRYRUN') is None:
                 download_path = '/tmp/{}{}'.format(uuid.uuid4(), '.zip')
                 s3_client.download_file(bucket, key, download_path)
                 logger.debug('downloaded from s3://{}/{} as {}'.format(bucket,key, download_path))

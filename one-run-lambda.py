@@ -178,7 +178,7 @@ def extract_stats(infile):
 def trigger_lambda(key):
     lambda_client = boto3.client('lambda', region_name='us-east-1', config=botocore.config.Config(read_timeout=100,retries={'max_attempts': 0}))
     one_event=EVENT_TEMPLATE.replace('$$KEYNAME$$',key)
-    if os.environ.get('MEDIATEL_DRURUN') is None:
+    if os.environ.get('MEDIATEL_DRYRUN') is None:
         lambda_client.invoke(FunctionName=lambda_arn, Payload=one_event)
     else:
         logger.info('Would have called lambda {} with this event:\n {}'.format(lambda_arn, one_event))
@@ -210,7 +210,7 @@ for this_date in dates_to_parse:
             key = this_object.key
             logger.info('Processing file: {} from bucket: {}'.format(key, bucket))
             if lambda_arn is None:
-                if os.environ.get('MEDIATEL_DRURUN') is None:
+                if os.environ.get('MEDIATEL_DRYRUN') is None:
                     download_path = '/tmp/{}{}'.format(uuid.uuid4(), '.zip')
                     s3_client.download_file(bucket, key, download_path)
                     logger.debug('downloaded from s3://{}/{} as {}'.format(bucket,key, download_path))

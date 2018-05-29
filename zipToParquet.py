@@ -26,8 +26,7 @@ if os.environ.get('MEDIATEL_DEBUG') is not None:
     logger.setLevel(logging.DEBUG)
     logger.info('set log level to DEBUG')
 
-
-TARGET_BUCKET='mediatel-vsz-parquet'
+TARGET_BUCKET='mediatel-parquet'
 if os.environ.get('MEDIATEL_PARQUET_BUCKET') is not None:
     TARGET_BUCKET=os.environ['MEDIATEL_PARQUET_BUCKET']
     logger.debug('set TARGET_BUCKET to {}'.format(TARGET_BUCKET))
@@ -36,6 +35,11 @@ IGNORE_SIZE=128000
 if os.environ.get('MEDIATEL_IGNORE_SIZE') is not None:
     IGNORE_SIZE=int(os.environ['MEDIATEL_IGNORE_SIZE'])
     logger.debug('set IGNORE_SIZE to {}'.format(IGNORE_SIZE))
+
+BUCKET_PATH=""
+if os.environ.get('MEDIATEL_BUCKET_PATH') is not None:
+    BUCKET_PATH=os.environ['MEDIATEL_BUCKET_PATH']
+    logger.debug('set BUCKET_PATH to {}'.format(BUCKET_PATH))
 
 s3_client = boto3.client('s3')
 s3 = s3fs.S3FileSystem()
@@ -66,7 +70,6 @@ def s3_key_exists(bucket, key):
             raise
     else:
         return True
-
 
 def extract_stats(infile):
     #APREportsStars MUST be the first to be processed!
@@ -127,10 +130,10 @@ def extract_stats(infile):
 
             if 'sampleTime' in this_header_row:
                 logger.debug("reading file with good header: {}".format(filename))
-                tdf=pd.read_csv(my_fake_file, header=0, names=good_headers[this_table], index_col=False)
+                tdf=pd.read_csv(my_fake_file, header=0, names=good_headers[this_table], index_col=False, keep_default_na=False)
             else:
                 logger.debug("reading file with missing header: {}".format(filename))
-                tdf=pd.read_csv(my_fake_file, header=None, names=good_headers[this_table], index_col=False)
+                tdf=pd.read_csv(my_fake_file, header=None, names=good_headers[this_table], index_col=False, keep_default_na=False)
             if len(tdf)>1:
                 logger.debug("File {} with {} rows read by pandas".format(filename, len(tdf)))
                 list_.append(tdf)
@@ -141,35 +144,40 @@ def extract_stats(infile):
 
         logger.debug("Finished loading data for table: {}".format(this_table))
 
+        if 'apMac' in df_array[this_table].columns:
+            df_array[this_table].rename(index=str,columns={'apMac':'ap'},inplace=True)
+
         if (this_table==JOIN_TABLE):
             df_aps=df_array[JOIN_TABLE][['ap','deviceName','domain_id','domain_name','zone_name','apgroup_name']]
             df_aps=df_aps.drop_duplicates(subset='ap')
-
-        if 'apMac' in df_array[this_table].columns:
-            df_array[this_table].rename(index=str,columns={'apMac':'ap'},inplace=True)
-        
-        if this_table is not JOIN_TABLE:
+        else:
             df_array[this_table]=df_array[this_table].merge(df_aps,on='ap',how='left')
 
         logger.debug("Finished building left_join for table: {}".format(this_table))
 
-        df_array[this_table]=df_array[this_table][df_array[this_table].columns[~df_array[this_table].columns.str.contains('ipv6', case=False, regex=False)]]
-        #print "Processing dates and partitions: ", this_table
-        df_array[this_table]['sampleTime']=pd.to_datetime(df_array[this_table]['sampleTime'],unit='s')
-        df_array[this_table]['partitionYear']=df_array[this_table]['sampleTime'].dt.year
-        df_array[this_table]['partitionMonth']=df_array[this_table]['sampleTime'].dt.month
-        df_array[this_table]['partitionDay']=df_array[this_table]['sampleTime'].dt.day
-        df_array[this_table]['partitionHour']=df_array[this_table]['sampleTime'].dt.hour
-        
-        parquet_s3_path=TARGET_BUCKET + '/' + this_table + '.parquet/'
+        v6_cols=a.columns[a.columns.str.contains('v6',case=False, regex=False)]
+        v6_cols_dict=dict((key,'bytes') for key in v6cols)
+        df_array[this_table]['sampleTimeNS']=pd.to_datetime(df_array[this_table]['sampleTime'],unit='s')
+        #df_array[this_table]['partitionYear']=df_array[this_table]['sampleTimeNS'].dt.year
+        #df_array[this_table]['partitionMonth']=df_array[this_table]['sampleTimeNS'].dt.month
+        #df_array[this_table]['partitionDay']=df_array[this_table]['sampleTimeNS'].dt.day
+        #df_array[this_table]['partitionHour']=df_array[this_table]['sampleTimeNS'].dt.hour
+        df_array[this_table]['partition_date']=np.datetime_as_string(df_array[this_table]['sampleTimeNS'],unit='D')
+        df_array[this_table].drop('sampleTimeNS', axis=1, inplace=True)
 
-        create_file=s3_key_exists(TARGET_BUCKET, this_table + '.parquet/_metadata')
+        for this_column in df_array[this_table].columns[df_array[this_table].columns.str.contains('time', case=False, regex=False)]:
+            df_array[this_table][this_column] = df_array[this_table][this_column]*1000 
+            logger.debug("Scaling timestamp colum: {} {}".format(this_table, this_column))
+        
+        parquet_s3_path=TARGET_BUCKET + '/'+ BUCKET_PATH + this_table + '.parquet/'
+
+        create_file=s3_key_exists(TARGET_BUCKET, BUCKET_PATH + this_table + '.parquet/_metadata')
 
         logger.debug("Existing parquet file found for table {}: {}".format(this_table, create_file))
         logger.debug("Saving table: {} with fields: {}".format(this_table, df_array[this_table].columns))
         fp.write(parquet_s3_path, df_array[this_table], file_scheme='hive', append=create_file,
-            partition_on=['domain_id','partitionYear','partitionMonth','partitionDay','partitionHour' ],
-            open_with=myopen, mkdirs=nop )
+            partition_on=['domain_id','partition_date'], object_encoding=v6_cols_dict,
+            open_with=myopen, mkdirs=nop, compression='GZIP' )
 
         logger.debug("Finished saving table: {}".format(this_table))
         del df_array[this_table]
