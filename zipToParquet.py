@@ -155,8 +155,6 @@ def extract_stats(infile):
 
         logger.debug("Finished building left_join for table: {}".format(this_table))
 
-        v6_cols=a.columns[a.columns.str.contains('v6',case=False, regex=False)]
-        v6_cols_dict=dict((key,'bytes') for key in v6cols)
         df_array[this_table]['sampleTimeNS']=pd.to_datetime(df_array[this_table]['sampleTime'],unit='s')
         #df_array[this_table]['partitionYear']=df_array[this_table]['sampleTimeNS'].dt.year
         #df_array[this_table]['partitionMonth']=df_array[this_table]['sampleTimeNS'].dt.month
@@ -176,7 +174,7 @@ def extract_stats(infile):
         logger.debug("Existing parquet file found for table {}: {}".format(this_table, create_file))
         logger.debug("Saving table: {} with fields: {}".format(this_table, df_array[this_table].columns))
         fp.write(parquet_s3_path, df_array[this_table], file_scheme='hive', append=create_file,
-            partition_on=['domain_id','partition_date'], object_encoding=v6_cols_dict,
+            partition_on=['domain_id','partition_date'],
             open_with=myopen, mkdirs=nop, compression='GZIP' )
 
         logger.debug("Finished saving table: {}".format(this_table))
