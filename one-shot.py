@@ -17,6 +17,15 @@ import s3fs
 import fastparquet as fp
 import warnings
 import zipToParquet
+import signal
+
+stop_loading=False
+
+def signal_handler(signal, frame):
+        print('You pressed Ctrl+C. Cleaning up! please wait')
+        stop_loading=True
+
+signal.signal(signal.SIGINT, signal_handler)
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 counter=0
@@ -61,7 +70,11 @@ mybucket=s3s3.Bucket(SOURCE_BUCKET)
 logger.info("Processing dates: {} {}".format(start_date, end_date))
 dates_to_parse = pd.date_range(start_date,end_date,freq=freq)
 for this_date in dates_to_parse:
+    if stop_loading:
+        break:
     for this_object in mybucket.objects.filter(Prefix='home/uploads/' + this_date.strftime(formatstring)):
+        if stop_loading:
+            break:
         if 'GWC2BCQK.zip' in this_object.key:
             counter+=1 
             bucket = this_object.bucket_name
@@ -78,5 +91,7 @@ for this_date in dates_to_parse:
                 zipToParquet.extract_stats(download_path)
                 os.remove(download_path)
 
+if stop_loading:
+    logger.info('Clean early exit - caught ctrl+C')
 
 logger.info('Processed {} records'.format(counter))
