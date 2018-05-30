@@ -22,8 +22,9 @@ import signal
 stop_loading=False
 
 def signal_handler(signal, frame):
-        print('You pressed Ctrl+C. Cleaning up! please wait')
-        stop_loading=True
+    global stop_loading
+    print('You pressed Ctrl+C. Cleaning up! please wait')
+    stop_loading=True
 
 signal.signal(signal.SIGINT, signal_handler)
 
