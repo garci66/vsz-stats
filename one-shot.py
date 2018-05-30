@@ -56,7 +56,7 @@ else:
 s3_client = boto3.client('s3')
 s3 = s3fs.S3FileSystem()
 s3s3 = boto3.resource('s3') 
-mybucket=s3s3.Bucket('SOURCE_BUCKET')
+mybucket=s3s3.Bucket(SOURCE_BUCKET)
 
 logger.info("Processing dates: {} {}".format(start_date, end_date))
 dates_to_parse = pd.date_range(start_date,end_date,freq=freq)
