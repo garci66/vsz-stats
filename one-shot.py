@@ -35,6 +35,11 @@ if os.environ.get('MEDIATEL_IGNORE_SIZE') is not None:
     IGNORE_SIZE=int(os.environ['MEDIATEL_IGNORE_SIZE'])
     logger.debug('set IGNORE_SIZE to {}'.format(IGNORE_SIZE))
 
+SOURCE_BUCKET='mediatel-push'
+if os.environ.get('MEDIATEL_SOURCE_BUCKET') is not None:
+    SOURCE_BUCKET=os.environ['MEDIATEL_SOURCE_BUCKET']
+    logger.debug('set SOURCE_BUCKET to {}'.format(SOURCE_BUCKET))
+
 start_date = sys.argv[1]
 if (len(sys.argv)==3):
     end_date= sys.argv[2]
@@ -51,7 +56,7 @@ else:
 s3_client = boto3.client('s3')
 s3 = s3fs.S3FileSystem()
 s3s3 = boto3.resource('s3') 
-mybucket=s3s3.Bucket('mediatel-vsz-push')
+mybucket=s3s3.Bucket('SOURCE_BUCKET')
 
 logger.info("Processing dates: {} {}".format(start_date, end_date))
 dates_to_parse = pd.date_range(start_date,end_date,freq=freq)
