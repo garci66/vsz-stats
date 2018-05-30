@@ -36,7 +36,7 @@ if os.environ.get('MEDIATEL_IGNORE_SIZE') is not None:
     IGNORE_SIZE=int(os.environ['MEDIATEL_IGNORE_SIZE'])
     logger.debug('set IGNORE_SIZE to {}'.format(IGNORE_SIZE))
 
-BUCKET_PATH="cluster1"
+BUCKET_PATH="cluster1/"
 if os.environ.get('MEDIATEL_BUCKET_PATH') is not None:
     BUCKET_PATH=os.environ['MEDIATEL_BUCKET_PATH']
     logger.debug('set BUCKET_PATH to {}'.format(BUCKET_PATH))
