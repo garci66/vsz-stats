@@ -15,6 +15,10 @@ import logging
 import s3fs
 import fastparquet as fp
 import warnings
+import pyarrow.parquet as pq
+import pyarrow
+from pyarrow.filesystem import S3FSWrapper
+
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 JOIN_TABLE='APReportStats'
@@ -164,15 +168,19 @@ def extract_stats(infile):
             df_array[this_table][this_column] = df_array[this_table][this_column]*1000 
             logger.debug("Scaling timestamp colum: {} {}".format(this_table, this_column))
         
-        parquet_s3_path=TARGET_BUCKET + '/'+ BUCKET_PATH + this_table + '.parquet/'
+        parquet_s3_path='s3://' + TARGET_BUCKET + '/'+ BUCKET_PATH + this_table + '.parquet'
+        myfs=s3fs.S3FileSystem()
 
-        create_file=s3_key_exists(TARGET_BUCKET, BUCKET_PATH + this_table + '.parquet/_metadata')
+        #create_file=s3_key_exists(TARGET_BUCKET, BUCKET_PATH + this_table + '.parquet/_metadata')
 
         logger.debug("Existing parquet file found for table {}: {}".format(this_table, create_file))
         logger.debug("Saving table: {} with fields: {}".format(this_table, df_array[this_table].columns))
-        fp.write(parquet_s3_path, df_array[this_table], file_scheme='hive', append=create_file,
-            partition_on=['domain_id','partition_date'], object_encoding={'serialNumber':'bytes'},
-            open_with=myopen, mkdirs=nop, compression='GZIP' )
+        temp_table=pyarrow.Table.from_pandas(df_array[this_table])
+        
+        pq.write_to_dataset(temp_table, parquet_s3_path, filesystem=myfs,
+            partition_cols=['domain_id','partition_date'] )
+
+        #df_array[this_table].to_parquet(parquet_s3_path, engine='pyarrow', partition_cols=['domain_id','partition_date'])
 
         logger.debug("Finished saving table: {}".format(this_table))
         del df_array[this_table]
