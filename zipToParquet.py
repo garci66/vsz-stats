@@ -73,7 +73,7 @@ def s3_key_exists(bucket, key):
 
 def extract_stats(infile):
     #APREportsStars MUST be the first to be processed!
-    tables_to_process=[JOIN_TABLE, 'APReportBinWlan','FlowMessage','APReportBinClient']
+    tables_to_process=[JOIN_TABLE, 'APReportBinWlan','FlowMessage','APReportBinClient', 'APStatusRadio', 'APStatusSystem']
     df_array= {}
     good_headers={}
 
@@ -145,7 +145,8 @@ def extract_stats(infile):
         logger.debug("Finished loading data for table: {}".format(this_table))
 
         if 'apMac' in df_array[this_table].columns:
-            df_array[this_table].rename(index=str,columns={'apMac':'ap'},inplace=True)
+            if 'ap' not in df_array[this_table].columns:
+                df_array[this_table].rename(index=str,columns={'apMac':'ap'},inplace=True)
 
         if (this_table==JOIN_TABLE):
             df_aps=df_array[JOIN_TABLE][['ap','deviceName','domain_id','domain_name','zone_name','apgroup_name']]
@@ -156,10 +157,6 @@ def extract_stats(infile):
         logger.debug("Finished building left_join for table: {}".format(this_table))
 
         df_array[this_table]['sampleTimeNS']=pd.to_datetime(df_array[this_table]['sampleTime'],unit='s')
-        #df_array[this_table]['partitionYear']=df_array[this_table]['sampleTimeNS'].dt.year
-        #df_array[this_table]['partitionMonth']=df_array[this_table]['sampleTimeNS'].dt.month
-        #df_array[this_table]['partitionDay']=df_array[this_table]['sampleTimeNS'].dt.day
-        #df_array[this_table]['partitionHour']=df_array[this_table]['sampleTimeNS'].dt.hour
         df_array[this_table]['partition_date']=np.datetime_as_string(df_array[this_table]['sampleTimeNS'],unit='D')
         df_array[this_table].drop('sampleTimeNS', axis=1, inplace=True)
 

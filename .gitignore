@@ -104,47 +104,8 @@ venv.bak/
 # mypy
 .mypy_cache/
 
+#ignore repacked lambda zip
 *.zip
 
 
-# Virtualenv
-# http://iamzed.com/2009/05/07/a-primer-on-virtualenv/
-.Python
-[Bb]in
-[Ii]nclude
-[Ll]ib
-[Ll]ib64
-[Ll]ocal
-[Ss]cripts
-pyvenv.cfg
-.venv
-pip-selfcheck.json
-
-#From this virtual environment
-boto3/
-botocore/
-concurrent/
-dateutil/
-docutils/
-easy_install.py
-enum/
-fastparquet/
-funcsigs/
-jmespath/
-llvmlite/
-numba/
-numpy/
-pandas/
-pip/
-pkg_resources/
-pytz/
-s3fs/
-s3transfer/
-setuptools/
-singledispatch.py
-singledispatch_helpers.py
-six.py
-thrift/
-tmp/
-wheel/
 
