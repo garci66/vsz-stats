@@ -71,10 +71,10 @@ logger.info("Processing dates: {} {}".format(start_date, end_date))
 dates_to_parse = pd.date_range(start_date,end_date,freq=freq)
 for this_date in dates_to_parse:
     if stop_loading:
-        break:
+        break
     for this_object in mybucket.objects.filter(Prefix='home/uploads/' + this_date.strftime(formatstring)):
         if stop_loading:
-            break:
+            break
         if 'GWC2BCQK.zip' in this_object.key:
             counter+=1 
             bucket = this_object.bucket_name
