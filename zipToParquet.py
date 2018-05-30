@@ -130,10 +130,10 @@ def extract_stats(infile):
 
             if 'sampleTime' in this_header_row:
                 logger.debug("reading file with good header: {}".format(filename))
-                tdf=pd.read_csv(my_fake_file, header=0, names=good_headers[this_table], index_col=False, keep_default_na=False)
+                tdf=pd.read_csv(my_fake_file, header=0, names=good_headers[this_table], index_col=False, keep_default_na=False, dtype={'serialNumber':str})
             else:
                 logger.debug("reading file with missing header: {}".format(filename))
-                tdf=pd.read_csv(my_fake_file, header=None, names=good_headers[this_table], index_col=False, keep_default_na=False)
+                tdf=pd.read_csv(my_fake_file, header=None, names=good_headers[this_table], index_col=False, keep_default_na=False, dtype={'serialNumber':str})
             if len(tdf)>1:
                 logger.debug("File {} with {} rows read by pandas".format(filename, len(tdf)))
                 list_.append(tdf)
@@ -171,7 +171,7 @@ def extract_stats(infile):
         logger.debug("Existing parquet file found for table {}: {}".format(this_table, create_file))
         logger.debug("Saving table: {} with fields: {}".format(this_table, df_array[this_table].columns))
         fp.write(parquet_s3_path, df_array[this_table], file_scheme='hive', append=create_file,
-            partition_on=['domain_id','partition_date'],
+            partition_on=['domain_id','partition_date'], object_encoding={'serialNumber':'bytes'},
             open_with=myopen, mkdirs=nop, compression='GZIP' )
 
         logger.debug("Finished saving table: {}".format(this_table))
