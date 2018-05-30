@@ -173,7 +173,7 @@ def extract_stats(infile):
 
         #create_file=s3_key_exists(TARGET_BUCKET, BUCKET_PATH + this_table + '.parquet/_metadata')
 
-        logger.debug("Existing parquet file found for table {}: {}".format(this_table, create_file))
+        #logger.debug("Existing parquet file found for table {}: {}".format(this_table, create_file))
         logger.debug("Saving table: {} with fields: {}".format(this_table, df_array[this_table].columns))
         temp_table=pyarrow.Table.from_pandas(df_array[this_table])
         
