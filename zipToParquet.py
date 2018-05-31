@@ -13,11 +13,9 @@ from cStringIO import StringIO
 import glob
 import logging
 import s3fs
-import fastparquet as fp
 import warnings
 import pyarrow.parquet as pq
 import pyarrow
-from pyarrow.filesystem import S3FSWrapper
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
@@ -180,7 +178,7 @@ def extract_stats(infile):
         temp_table=pyarrow.Table.from_pandas(df_array[this_table])
         
         pq.write_to_dataset(temp_table, parquet_s3_path, filesystem=myfs,
-            partition_cols=['domain_id','partition_date'] )
+            partition_cols=['domain_id','partition_date'], compression='gzip' )
 
         #df_array[this_table].to_parquet(parquet_s3_path, engine='pyarrow', partition_cols=['domain_id','partition_date'])
 
