@@ -1,0 +1,15 @@
+boto3==1.7.14
+botocore==1.10.14
+docutils==0.14
+futures==3.2.0
+jmespath==0.9.3
+numpy==1.14.3
+pandas==0.23.0
+pip-autoremove==0.9.1
+pyarrow==0.9.0
+python-dateutil==2.7.2
+python-snappy==0.5.2
+pytz==2018.4
+s3fs==0.1.5
+s3transfer==0.1.13
+six==1.11.0
