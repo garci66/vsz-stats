@@ -14,7 +14,6 @@ from cStringIO import StringIO
 import glob
 import logging
 import s3fs
-import fastparquet as fp
 import warnings
 import zipToParquet
 import signal
