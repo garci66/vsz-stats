@@ -15,7 +15,7 @@ import logging
 import s3fs
 import warnings
 import pyarrow.parquet as pq
-import pyarrow
+import pyarrow as pa
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
@@ -175,7 +175,7 @@ def extract_stats(infile):
 
         #logger.debug("Existing parquet file found for table {}: {}".format(this_table, create_file))
         logger.debug("Saving table: {} with fields: {}".format(this_table, df_array[this_table].columns))
-        temp_table=pyarrow.Table.from_pandas(df_array[this_table])
+        temp_table=pa.Table.from_pandas(df_array[this_table])
         
         pq.write_to_dataset(temp_table, parquet_s3_path, filesystem=myfs,
             partition_cols=['domain_id','partition_date'], compression='gzip' )
