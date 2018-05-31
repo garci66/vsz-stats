@@ -13,8 +13,8 @@ b.to_parquet(parquetfile, engine='fastparquet', append=True, compression='GZIP')
 
 import s3fs
 from fastparquet import ParquetFile
-s3 = s3fs.S3FileSystem()
-myopen = s3.open
+thiss3 = s3fs.S3FileSystem()
+myopen = thiss3.open
 pf = ParquetFile(parquetfile, open_with=myopen)
 df = pf.to_pandas()
 
@@ -91,4 +91,10 @@ E8:1D:A8:38:92:50,1525352447,1,52,11ac,5G,11ac,max,3,,-105,3065408072,3848613,78
 '''
 
 df_radio=pd.read_csv(StringIO.StringIO(data_radio),keep_default_na=False)
+
+
+
+incldign this
+[2018-05-30 06:29:39,264] INFO Processing file: home/uploads/2018050606_GWC2BCQK.zip from bucket: mediatel-push
+
 

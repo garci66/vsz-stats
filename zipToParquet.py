@@ -52,14 +52,16 @@ def handler(event, context):
     logger.debug('got event{}'.format(event))
     for record in event['Records']:
         bucket = record['s3']['bucket']['name']
-        key = record['s3']['object']['key'] 
+        key = record['s3']['object']['key']
+        size = record['s3']['object']['size']
         logger.info('Processing file: {} from bucket: {}'.format(key, bucket))
+        logger.debug('event details: {}'.format(record))
+        if (size < IGNORE_SIZE):
+            logger.info('Bypassing zip file due to small size: {}. Threshold: {}- will retry later: {} | {}'.format(size, IGNORE_SIZE, bucket, key))
+            continue
         download_path = '/tmp/{}{}'.format(uuid.uuid4(), '.zip')
         s3_client.download_file(bucket, key, download_path)
         logger.debug('downloaded from s3://{}/{} as {}'.format(bucket,key, download_path))
-        if (os.stat(download_path).st_size < IGNORE_SIZE):
-            logger.info('Bypassing zip file due to small size. Threshold: {}- will retry later: {} | {}'.format(IGNORE_SIZE, bucket, key))
-            continue
         extract_stats(download_path)
 
 
